@@ -1,9 +1,21 @@
-function loadCdn() { 
-    if (window.jsPDF) return;
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js';
+function loadScript(url) { 
+    return new Promise((res, rej) => {
+        const script = document.createElement('script');
+        script.src = url;
+        document.body.appendChild(script);
+        script.async = true;
+
+        script.onload = res;
+        script.onerror = rej;
+    })
     
-    document.body.appendChild(script);
+}
+
+async function loadCdns(urls=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js']) { 
+    const urlsToLoad = urls;
+
+    for (const url of urlsToLoad) 
+        await loadScript(url)
 }
 
 function getImageUriFromImageElement(imageElement) { 
@@ -24,9 +36,7 @@ function getElements() {
 }
 
 function generatePdf(elements) { 
-    const pdf = new jsPDF({
-        orientation: 'portrait'
-    });
+    const pdf = new jsPDF('p', 'mm', 'a4');
 
     for (const pdfImage of elements) { 
         const dataUri = getImageUriFromImageElement(pdfImage);
@@ -41,56 +51,10 @@ function generatePdf(elements) {
     return pdf;
 }
 
-function prepareDownload() { 
-    loadCdn();
-    scrollToEnd();
-}
 
-function saveImagesPDF(name='secured.pdf') { 
+async function saveImagesPDF(name=document.querySelector('title').text) { 
+    await loadCdns() 
     const elements = getElements();
     const pdf = generatePdf(elements)
-    pdf.save(name);
-}
-
-
-function scrollToEnd(){
-    let allElements = document.querySelectorAll("*");
-    let chosenElement;
-    let heightOfScrollableElement = 0;
-
-    for (i = 0; i < allElements.length; i++) {
-        if ( allElements[i].scrollHeight>=allElements[i].clientHeight){
-            if (heightOfScrollableElement < allElements[i].scrollHeight){
-                heightOfScrollableElement = allElements[i].scrollHeight;
-                chosenElement = allElements[i];
-            }
-        }
-    }
-
-    if (chosenElement.scrollHeight > chosenElement.clientHeight){
-
-        let scrollDistance = Math.round(chosenElement.clientHeight/2);
-
-        let loopCounter = 0;
-        function myLoop(remainingHeightToScroll, scrollToLocation) {
-            loopCounter = loopCounter+1;
-
-            setTimeout(function() {
-                if (remainingHeightToScroll === 0){
-                    scrollToLocation = scrollDistance;
-                    chosenElement.scrollTo(0, scrollToLocation);
-                    remainingHeightToScroll = chosenElement.scrollHeight - scrollDistance;
-                }else{
-                    scrollToLocation = scrollToLocation + scrollDistance ;
-                    chosenElement.scrollTo(0, scrollToLocation);
-                    remainingHeightToScroll = remainingHeightToScroll - scrollDistance;
-                }
-
-                if (remainingHeightToScroll >= chosenElement.clientHeight){
-                    myLoop(remainingHeightToScroll, scrollToLocation)
-                }
-            }, 400)
-        }
-        myLoop(0, 0);
-    }
+    pdf.save(name + '.pdf');
 }
